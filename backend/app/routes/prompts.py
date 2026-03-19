@@ -1,27 +1,26 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.dependencies.auth import get_current_user
+from app.dependencies.database import get_db
 from app.models.prompt import Prompt
+from app.models.user import User
 from app.schemas.prompt import PromptCreate, PromptResponse
 
 
 router = APIRouter(prefix="/prompts", tags=["prompts"])
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 @router.post("/", response_model=PromptResponse)
-def create_prompt(prompt: PromptCreate, db: Session = Depends(get_db)):
+def create_prompt(
+    prompt: PromptCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
 
     new_prompt = Prompt(
         title=prompt.title,
         content=prompt.content,
-        user_id=1
+        user_id=current_user.id,
     )
 
     db.add(new_prompt)
@@ -29,3 +28,8 @@ def create_prompt(prompt: PromptCreate, db: Session = Depends(get_db)):
     db.refresh(new_prompt)
 
     return new_prompt
+
+@router.get("/", response_model=list[PromptResponse])
+def get_prompts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    prompts = db.query(Prompt).filter(Prompt.user_id == current_user.id).all()
+    return prompts

@@ -43,7 +43,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # verify password
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.hashed_password.as_string()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # generate access token
